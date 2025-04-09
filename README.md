@@ -10,5 +10,9 @@
 
 注意，Linux需要安装`musl`运行环境，请自行谷歌
 
-# 使用参数，参照截图
-![](https://raw.githubusercontent.com/stephen-zeng/img/master/20250409232913.png)
+# 使用方法和效果
+演示是没有命中缓存的效果，命中之后更快
+<div style="display: flex; justify-content: center;align-items: center;">
+  <img src="https://raw.githubusercontent.com/stephen-zeng/img/master/20250409232913.png">
+  <img src="https://raw.githubusercontent.com/stephen-zeng/img/master/ScreenRecording_04-10-2025%2012-20-18%E2%80%AFAM_1.gif">
+</div>
