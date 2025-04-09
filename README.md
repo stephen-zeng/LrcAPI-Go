@@ -1,7 +1,8 @@
 # lrcAPI - Go
-为Stream Music音流写的一个基于Go的歌词获取工具。特点
+为[Stream Music](https://music.aqzscn.cn/)音流写的一个基于Go的歌词获取工具。特点
 + 有缓存机制
 + Go编写，速度嘎嘎快
++ 自动翻译，双语歌词
 
 # 启动参数
 + `--port xxxx` - 设定端口为xxxx
