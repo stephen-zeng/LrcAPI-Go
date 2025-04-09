@@ -14,5 +14,5 @@
 演示是没有命中缓存的效果，命中之后更快
 <div style="display: flex; justify-content: center;align-items: center;">
   <img src="https://raw.githubusercontent.com/stephen-zeng/img/master/20250409232913.png">
-  <img src="https://raw.githubusercontent.com/stephen-zeng/img/master/ScreenRecording_04-10-2025%2012-20-18%E2%80%AFAM_1.gif">
+  <img src="https://gh.qwqwq.com.cn/stephen-zeng/img/master/e1d6503ad000a2fd92f71f3afce7d059.gif">
 </div>
