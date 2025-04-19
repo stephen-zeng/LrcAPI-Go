@@ -18,4 +18,4 @@
 </div>
 
 # Docker部署
-详见衍生项目[LrcAPI-Go-main](https://github.com/zhumao520/LrcAPI-Go-main)，我也不懂这个人为什么不PR，PR挺好的😅
+详见衍生项目[LrcAPI-Go-main](https://github.com/zhumao520/LrcAPI-Go-main)，我也不懂这哥们为什么不PR，PR挺好的😅
