@@ -16,3 +16,6 @@
   <img src="https://raw.githubusercontent.com/stephen-zeng/img/master/20250409232913.png">
   <img src="https://gh.qwqwq.com.cn/stephen-zeng/img/master/e1d6503ad000a2fd92f71f3afce7d059.gif">
 </div>
+
+# Docker部署
+详见衍生项目[LrcAPI-Go-main](https://github.com/zhumao520/LrcAPI-Go-main)
