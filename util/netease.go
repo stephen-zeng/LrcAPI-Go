@@ -43,12 +43,15 @@ type neteaseSerachIDResponse struct {
 func NeteaseGetLyric(ID string) (string, string, error) {
 	url := fmt.Sprintf(neteaseLrcURLTemplate, ID)
 	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("User-Agent", UA)
+	SetHeader(req)
 	req.Header.Set("Referer", "https://music.163.com/")
 	req.Header.Set("Origin", "https://music.163.com/")
 	resp, err := GlobalHTTPClient.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		return "", "", errors.WithMessage(err, resp.Status)
+	switch {
+	case err != nil:
+		return "", "", errors.WithStack(err)
+	case resp.StatusCode != http.StatusOK:
+		return "", "", errors.WithStack(errors.New(resp.Status))
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
@@ -66,8 +69,11 @@ func NeteaseGetMusic(Title, Artist string) (*[]string, *[]string, *[]string, err
 	req.Header.Set("Referer", "https://music.163.com/")
 	req.Header.Set("Origin", "https://music.163.com/")
 	resp, err := GlobalHTTPClient.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		return nil, nil, nil, errors.WithMessage(err, resp.Status)
+	switch {
+	case err != nil:
+		return nil, nil, nil, errors.WithStack(err)
+	case resp.StatusCode != http.StatusOK:
+		return nil, nil, nil, errors.WithStack(errors.New(resp.Status))
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)

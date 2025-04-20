@@ -25,6 +25,11 @@ func (info *File) WriteLyric() error {
 func (info *File) ReadLyric() error {
 	pathName := "assets/" + info.FolderName
 	lyricFolder, err := os.ReadDir(pathName)
+	if len(lyricFolder) == 0 ||
+		(len(lyricFolder) == 1 && lyricFolder[0].Name()[0] == '.') || // fuck you .DS_Store!!!
+		(len(lyricFolder) == 1 && lyricFolder[0].Name() == "desktop.ini") { // fuck you desktop.ini!!!
+		err = os.ErrNotExist
+	}
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -41,4 +46,9 @@ func (info *File) ReadLyric() error {
 		info.InfoLyric = append(info.InfoLyric, infoLyric)
 	}
 	return nil
+}
+
+func (info *File) RemoveLyric() error {
+	pathName := "assets/" + info.FolderName
+	return errors.WithStack(os.RemoveAll(pathName))
 }
