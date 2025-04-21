@@ -3,30 +3,23 @@ package processor
 import (
 	"github.com/pkg/errors"
 	"lrcAPI/util"
-	"strconv"
+	"sort"
 )
 
 func (data *Processor) Process() error {
-	var titles, artists, oriLrc, trLrc []string
-	if err := netease(data, &titles, &artists, &oriLrc, &trLrc); err != nil {
+	if err := netease(data); err != nil {
 		return errors.Wrap(err, "neteaseAPI")
 	}
-	if err := qq(data, &titles, &artists, &oriLrc, &trLrc); err != nil {
+	if err := qq(data); err != nil {
 		return errors.Wrap(err, "qqAPI")
 	}
-	for index, _ := range titles {
-		infoLyric := InfoLyric{
-			ID:     strconv.Itoa(index),
-			Title:  titles[index],
-			Artist: artists[index],
-			Lyric:  util.LrcTranslationBlender(oriLrc[index], trLrc[index]),
-		}
-		data.InfoLyric = append(data.InfoLyric, infoLyric)
-	}
+	sort.Slice(data.InfoLyric, func(i, j int) bool {
+		return data.InfoLyric[i].Index < data.InfoLyric[j].Index
+	})
 	return nil
 }
 
-func netease(data *Processor, Titles, Artists, OriLrc, TrLrc *[]string) error {
+func netease(data *Processor) error {
 	musicIDs, titles, artists, err := util.NeteaseGetMusic(data.Title, data.Artist)
 	if err != nil {
 		return errors.WithStack(err)
@@ -39,15 +32,17 @@ func netease(data *Processor, Titles, Artists, OriLrc, TrLrc *[]string) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		*Titles = append(*Titles, (*titles)[index])
-		*Artists = append(*Artists, (*artists)[index])
-		*OriLrc = append(*OriLrc, oriLrc)
-		*TrLrc = append(*TrLrc, trLrc)
+		data.InfoLyric = append(data.InfoLyric, InfoLyric{
+			Index:  API_TOT*index + NETEASE_API_COUNT,
+			Title:  (*titles)[index] + " (网易云音乐)",
+			Artist: (*artists)[index],
+			Lyric:  util.LrcTranslationBlender(oriLrc, trLrc),
+		})
 	}
 	return nil
 }
 
-func qq(data *Processor, Titles, Artists, OriLrc, TrLrc *[]string) error {
+func qq(data *Processor) error {
 	musicIDs, musicMIDs, titles, artists, err := util.QQGetMusic(data.Title)
 	if err != nil {
 		return errors.WithStack(err)
@@ -60,10 +55,12 @@ func qq(data *Processor, Titles, Artists, OriLrc, TrLrc *[]string) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		*Titles = append(*Titles, (*titles)[index])
-		*Artists = append(*Artists, (*artists)[index])
-		*OriLrc = append(*OriLrc, oriLrc)
-		*TrLrc = append(*TrLrc, trLrc)
+		data.InfoLyric = append(data.InfoLyric, InfoLyric{
+			Index:  API_TOT*index + QQ_API_COUNT,
+			Title:  (*titles)[index] + " (QQ音乐)",
+			Artist: (*artists)[index],
+			Lyric:  util.LrcTranslationBlender(oriLrc, trLrc),
+		})
 	}
 	return nil
 }
