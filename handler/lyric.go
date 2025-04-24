@@ -7,6 +7,7 @@ import (
 	"lrcAPI/request"
 	"lrcAPI/util"
 	"net/http"
+	"strconv"
 )
 
 func lyricHandler(c *gin.Context) {
@@ -35,9 +36,9 @@ func lyricHandler(c *gin.Context) {
 		util.ErrorPrinter(err)
 		c.JSON(404, gin.H{})
 	}
-	for _, value := range lyricRequest.Processor.InfoLyric {
+	for index, value := range lyricRequest.Processor.InfoLyric {
 		lyricRequest.File.InfoLyric = append(lyricRequest.File.InfoLyric, file.InfoLyric{
-			ID:     value.ID,
+			ID:     strconv.Itoa(index),
 			Title:  value.Title,
 			Artist: value.Artist,
 			Lyric:  value.Lyric,

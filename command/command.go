@@ -1,5 +1,7 @@
 package command
 
+import "os"
+
 func Arg(args []string) {
 	for index, arg := range args {
 		if index == 0 {
@@ -11,5 +13,8 @@ func Arg(args []string) {
 		case "--pwd":
 			Pwd = args[index+1]
 		}
+	}
+	if os.Getenv("PWD") != "" {
+		Pwd = os.Getenv("PWD")
 	}
 }
