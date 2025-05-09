@@ -14,7 +14,8 @@ func Arg(args []string) {
 			Pwd = args[index+1]
 		}
 	}
-	if os.Getenv("PWD") != "" {
+	dir, _ := os.Getwd()
+	if os.Getenv("PWD") != "" && os.Getenv("PWD") != dir {
 		Pwd = os.Getenv("PWD")
 	}
 }
