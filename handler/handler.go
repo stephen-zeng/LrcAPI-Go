@@ -26,5 +26,6 @@ func Handler(port, passwd string) {
 		c.JSON(http.StatusForbidden, gin.H{})
 	})
 	log.Printf("The server will be running on port %s", port)
+	log.Printf("The default password is 123456")
 	r.Run(":" + port)
 }
