@@ -8,8 +8,6 @@
 + `--port xxxx` - 设定端口为xxxx
 + `--pwd xxxxxxx` - 设定验证密码为xxxxxxx
 
-注意，Linux需要安装`musl`运行环境，请自行谷歌
-
 # 使用方法和效果
 演示是没有命中缓存的效果，命中之后更快
 <div style="display: flex; justify-content: center;align-items: center;">
@@ -32,6 +30,9 @@ docker run -d --name lrcapi -e PWD=123456 -p 8080:1111 -v /home/stephenzeng/dock
 ```
 + 镜像目前`latest`和具体版本号两种tag，建议使用`latest`。
 + arm版本的镜像为`0w0w0/lrcapi-go-arm`
+
+# 二进制部署
+可以到action里面去获取最新的二进制版本，也可以去release里面获取稳定的二进制版本
 
 # 注册为systemctl服务
 下面是`/etc/systemd/system/lrcAPI.service`模板
