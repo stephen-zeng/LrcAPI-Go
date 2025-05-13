@@ -16,6 +16,12 @@ func (data *Processor) Process() error {
 	sort.Slice(data.InfoLyric, func(i, j int) bool {
 		return data.InfoLyric[i].Index < data.InfoLyric[j].Index
 	})
+	data.InfoLyric = append(data.InfoLyric, InfoLyric{
+		Index:  -1,
+		Title:  data.Title,
+		Artist: data.Artist,
+		Lyric:  `[00:00.00] No Lyric（无歌词）`,
+	})
 	return nil
 }
 
