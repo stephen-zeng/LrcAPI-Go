@@ -2,9 +2,8 @@ name: Build
 
 on:
   push:
-    branches: [ main, dev ]
-  pull_request:
-    branches: [ main, dev ]
+    tags:
+      - 'v*'
 
 jobs:
   build:
@@ -34,10 +33,31 @@ jobs:
           if [ "${GOOS}" = "windows" ]; then
             ext=".exe"
           fi
-          CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -o build/lrcAPI${GOOS}-${GOARCH}${ext} .
+          CGO_ENABLED=0 GOOS=${GOOS} GOARCH=${GOARCH} go build -o build/lrcAPI-${GOOS}-${GOARCH}${ext} .
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
           name: lrcAPI-binaries-${{ matrix.goos }}-${{ matrix.goarch }}
           path: build/
+        
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Display downloaded files
+        run: ls -R dist
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
