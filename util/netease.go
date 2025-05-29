@@ -40,6 +40,7 @@ type neteaseSerachIDResponse struct {
 // 通过ID查找歌词
 // 返回歌词，翻译歌词以及错误
 // 返回的歌词都是未转译的
+// 若返回的歌词数据是空的，那就是无歌词（纯音乐）
 func NeteaseGetLyric(ID string) (string, string, error) {
 	url := fmt.Sprintf(neteaseLrcURLTemplate, ID)
 	req, _ := http.NewRequest("GET", url, nil)
