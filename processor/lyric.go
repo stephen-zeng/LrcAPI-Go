@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"lrcAPI/util"
 	"sort"
@@ -20,7 +21,7 @@ func (data *Processor) Process() error {
 		Index:  -1,
 		Title:  data.Title,
 		Artist: data.Artist,
-		Lyric:  `[00:00.00] No Lyric（无歌词）`,
+		Lyric:  fmt.Sprintf("[00:00.00]%s\n[00:00.00]%s", data.Title, data.Artist),
 	})
 	return nil
 }
