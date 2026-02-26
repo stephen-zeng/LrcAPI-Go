@@ -2,6 +2,8 @@ name: Docker
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 
@@ -9,6 +11,7 @@ jobs:
   build-x86:
     runs-on: ubuntu-latest
     environment: DOCKERHUB
+    if: startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && github.event.head_commit.message != 'update README')
 
     steps:
       - name: Checkout code
@@ -25,7 +28,12 @@ jobs:
 
       - name: Get tag
         id: get_tag
-        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          else
+            echo "TAG=latest" >> $GITHUB_ENV
+          fi
 
       - name: Build and push Docker image (x86)
         uses: docker/build-push-action@v5
@@ -38,6 +46,7 @@ jobs:
   build-arm64:
     runs-on: ubuntu-24.04-arm
     environment: DOCKERHUB
+    if: startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && github.event.head_commit.message != 'update README')
 
     steps:
       - name: Checkout code
@@ -54,7 +63,12 @@ jobs:
 
       - name: Get tag
         id: get_tag
-        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          else
+            echo "TAG=latest" >> $GITHUB_ENV
+          fi
 
       - name: Build and push Docker image (arm64)
         uses: docker/build-push-action@v5
