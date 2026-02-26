@@ -2,8 +2,8 @@ package file
 
 import (
 	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
+	_ "modernc.org/sqlite"
 	"os"
 )
 
@@ -26,7 +26,7 @@ func init() {
 }
 
 func openDB() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "assets/lyrics.db")
+	db, err := sql.Open("sqlite", "assets/lyrics.db")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
