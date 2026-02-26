@@ -31,8 +31,10 @@ jobs:
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+            echo "TAGS=${{ secrets.DOCKERHUB_USERNAME }}/lrcapi-go:${GITHUB_REF#refs/tags/},${{ secrets.DOCKERHUB_USERNAME }}/lrcapi-go:latest" >> $GITHUB_ENV
           else
             echo "TAG=latest" >> $GITHUB_ENV
+            echo "TAGS=${{ secrets.DOCKERHUB_USERNAME }}/lrcapi-go:latest" >> $GITHUB_ENV
           fi
 
       - name: Build and push Docker image (x86)
@@ -41,7 +43,7 @@ jobs:
           context: .
           file: ./Dockerfile.d/amd64
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/lrcapi-go:${{ env.TAG }}
+          tags: ${{ env.TAGS }}
 
   build-arm64:
     runs-on: ubuntu-24.04-arm
@@ -66,8 +68,10 @@ jobs:
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+            echo "TAGS=${{ secrets.DOCKERHUB_USERNAME }}/lrcapi-go-arm:${GITHUB_REF#refs/tags/},${{ secrets.DOCKERHUB_USERNAME }}/lrcapi-go-arm:latest" >> $GITHUB_ENV
           else
             echo "TAG=latest" >> $GITHUB_ENV
+            echo "TAGS=${{ secrets.DOCKERHUB_USERNAME }}/lrcapi-go-arm:latest" >> $GITHUB_ENV
           fi
 
       - name: Build and push Docker image (arm64)
@@ -76,4 +80,4 @@ jobs:
           context: .
           file: ./Dockerfile.d/arm64
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/lrcapi-go-arm:${{ env.TAG }}
+          tags: ${{ env.TAGS }}
