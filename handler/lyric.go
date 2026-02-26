@@ -23,9 +23,13 @@ func lyricHandler(c *gin.Context) {
 	lyricRequest.File.FolderName = lyricRequest.Processor.Artist + " - " + lyricRequest.Processor.Title
 	if delOp == "true" {
 		log.Printf("Delete Tmp for %s\n", lyricRequest.Processor.Artist)
+		if err := lyricRequest.File.RemoveLyric(); err != nil {
+			util.ErrorPrinter(err)
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"Delete": lyricRequest.File.FolderName,
 		})
+		return
 	}
 	if err := lyricRequest.File.ReadLyric(); err == nil {
 		log.Println("found exist")

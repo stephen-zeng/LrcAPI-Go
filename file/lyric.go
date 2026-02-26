@@ -1,54 +1,76 @@
 package file
 
 import (
-	"encoding/json"
 	"github.com/pkg/errors"
 	"os"
-	"sort"
 )
 
 func (info *File) WriteLyric() error {
-	pathName := "assets/" + info.FolderName
-	os.Mkdir(pathName, 0777)
+	db, err := openDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	tx, err := db.Begin()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if _, err := tx.Exec("DELETE FROM lyrics WHERE cache_key = ?", info.FolderName); err != nil {
+		_ = tx.Rollback()
+		return errors.WithStack(err)
+	}
+	stmt, err := tx.Prepare("INSERT INTO lyrics (cache_key, lyric_id, title, artist, lyric) VALUES (?, ?, ?, ?, ?)")
+	if err != nil {
+		_ = tx.Rollback()
+		return errors.WithStack(err)
+	}
+	defer stmt.Close()
 	for _, infoLyric := range info.InfoLyric {
-		lyricFile, err := os.Create(pathName + "/" + infoLyric.ID + ".json")
-		if err != nil {
+		if _, err := stmt.Exec(info.FolderName, infoLyric.ID, infoLyric.Title, infoLyric.Artist, infoLyric.Lyric); err != nil {
+			_ = tx.Rollback()
 			return errors.WithStack(err)
 		}
-		defer lyricFile.Close()
-		encoder := json.NewEncoder(lyricFile)
-		encoder.Encode(infoLyric)
+	}
+	if err := tx.Commit(); err != nil {
+		return errors.WithStack(err)
 	}
 	return nil
 }
 
 func (info *File) ReadLyric() error {
-	pathName := "assets/" + info.FolderName
-	lyricFolder, err := os.ReadDir(pathName)
-	if len(lyricFolder) == 0 ||
-		(len(lyricFolder) == 1 && lyricFolder[0].Name()[0] == '.') || // fuck you .DS_Store!!!
-		(len(lyricFolder) == 1 && lyricFolder[0].Name() == "desktop.ini") { // fuck you desktop.ini!!!
-		err = os.ErrNotExist
+	db, err := openDB()
+	if err != nil {
+		return err
 	}
+	defer db.Close()
+	rows, err := db.Query("SELECT lyric_id, title, artist, lyric FROM lyrics WHERE cache_key = ? ORDER BY CAST(lyric_id AS INTEGER), lyric_id", info.FolderName)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	info.HasPrevious = true
-	sort.Slice(lyricFolder, func(i, j int) bool {
-		return lyricFolder[i].Name() < lyricFolder[j].Name()
-	})
-	for _, infoLyricFile := range lyricFolder {
-		lyricFile, _ := os.Open(pathName + "/" + infoLyricFile.Name())
-		defer lyricFile.Close()
-		decoder := json.NewDecoder(lyricFile)
+	defer rows.Close()
+	for rows.Next() {
 		var infoLyric InfoLyric
-		decoder.Decode(&infoLyric)
+		if err := rows.Scan(&infoLyric.ID, &infoLyric.Title, &infoLyric.Artist, &infoLyric.Lyric); err != nil {
+			return errors.WithStack(err)
+		}
 		info.InfoLyric = append(info.InfoLyric, infoLyric)
 	}
+	if err := rows.Err(); err != nil {
+		return errors.WithStack(err)
+	}
+	if len(info.InfoLyric) == 0 {
+		return errors.WithStack(os.ErrNotExist)
+	}
+	info.HasPrevious = true
 	return nil
 }
 
 func (info *File) RemoveLyric() error {
-	pathName := "assets/" + info.FolderName
-	return errors.WithStack(os.RemoveAll(pathName))
+	db, err := openDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	_, err = db.Exec("DELETE FROM lyrics WHERE cache_key = ?", info.FolderName)
+	return errors.WithStack(err)
 }

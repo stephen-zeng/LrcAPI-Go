@@ -1,6 +1,6 @@
 # lrcAPI - Go
 为[Stream Music](https://music.aqzscn.cn/)音流写的一个基于Go的歌词获取工具。特点
-+ 有缓存机制
++ 有缓存机制（SQLite）
 + Go编写，速度嘎嘎快
 + 自动翻译，双语歌词
 
@@ -30,6 +30,9 @@ docker run -d --name lrcapi -e PWD=123456 -p 8080:1111 -v /home/stephenzeng/dock
 ```
 + 镜像目前`latest`和具体版本号两种tag，建议使用`latest`。
 + arm版本的镜像为`0w0w0/lrcapi-go-arm`
+
+# 数据存储
+SQLite数据库默认存放在`assets/lyrics.db`，仍然建议将`/app/assets`挂载为持久化目录。
 
 # 二进制部署
 可以到action里面去获取最新的二进制版本，也可以去release里面获取稳定的二进制版本
