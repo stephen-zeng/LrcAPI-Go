@@ -38,7 +38,6 @@ func lyricHandler(c *gin.Context) {
 	}
 	if err := lyricRequest.Processor.Process(); err != nil {
 		util.ErrorPrinter(err)
-		c.JSON(404, gin.H{})
 	}
 	for index, value := range lyricRequest.Processor.InfoLyric {
 		lyricRequest.File.InfoLyric = append(lyricRequest.File.InfoLyric, file.InfoLyric{
