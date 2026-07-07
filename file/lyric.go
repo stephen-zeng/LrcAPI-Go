@@ -1,8 +1,12 @@
 package file
 
 import (
-	"github.com/pkg/errors"
 	"os"
+	"sort"
+	"strconv"
+
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 func (info *File) WriteLyric() error {
@@ -10,33 +14,40 @@ func (info *File) WriteLyric() error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-	tx, err := db.Begin()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	if _, err := tx.Exec("DELETE FROM lyrics WHERE cache_key = ?", info.FolderName); err != nil {
-		_ = tx.Rollback()
-		return errors.WithStack(err)
-	}
-	stmt, err := tx.Prepare("INSERT INTO lyrics (cache_key, lyric_id, title, artist, lyric, romaji, type, source, is_complete) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-	if err != nil {
-		_ = tx.Rollback()
-		return errors.WithStack(err)
-	}
-	defer stmt.Close()
-	for _, infoLyric := range info.InfoLyric {
-		// 存储时统一按内容计算 is_complete，保证与响应/补全逻辑一致
-		complete := computeComplete(infoLyric.Source, infoLyric.Lyric, infoLyric.Romaji)
-		if _, err := stmt.Exec(info.FolderName, infoLyric.ID, infoLyric.Title, infoLyric.Artist, infoLyric.Lyric, infoLyric.Romaji, infoLyric.Type, infoLyric.Source, boolToInt(complete)); err != nil {
-			_ = tx.Rollback()
-			return errors.WithStack(err)
+	defer closeDB(db)
+
+	return errors.WithStack(db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where(lyricCacheKeyFilter(info.FolderName)).Delete(&lyricRow{}).Error; err != nil {
+			return err
 		}
-	}
-	if err := tx.Commit(); err != nil {
-		return errors.WithStack(err)
-	}
-	return nil
+		rows := make([]lyricRow, 0, len(info.InfoLyric))
+		for _, infoLyric := range info.InfoLyric {
+			lyricType := infoLyric.Type
+			if lyricType == "" {
+				lyricType = "lrc"
+			}
+			// 存储时统一按内容计算 is_complete，保证与响应/补全逻辑一致
+			complete := computeComplete(infoLyric.Source, infoLyric.Lyric, infoLyric.Romaji)
+			rows = append(rows, lyricRow{
+				CacheKey:   info.FolderName,
+				LyricID:    infoLyric.ID,
+				Title:      infoLyric.Title,
+				Artist:     infoLyric.Artist,
+				Lyric:      infoLyric.Lyric,
+				Romaji:     infoLyric.Romaji,
+				Type:       lyricType,
+				Source:     infoLyric.Source,
+				IsComplete: boolToInt(complete),
+			})
+		}
+		if len(rows) == 0 {
+			return nil
+		}
+		if err := tx.Create(&rows).Error; err != nil {
+			return err
+		}
+		return nil
+	}))
 }
 
 func (info *File) ReadLyric() error {
@@ -44,26 +55,29 @@ func (info *File) ReadLyric() error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-	rows, err := db.Query("SELECT lyric_id, title, artist, lyric, romaji, type, source, is_complete FROM lyrics WHERE cache_key = ? ORDER BY CAST(lyric_id AS INTEGER), lyric_id", info.FolderName)
-	if err != nil {
+	defer closeDB(db)
+
+	var rows []lyricRow
+	if err := db.Where(lyricCacheKeyFilter(info.FolderName)).Find(&rows).Error; err != nil {
 		return errors.WithStack(err)
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var infoLyric InfoLyric
-		var complete int
-		if err := rows.Scan(&infoLyric.ID, &infoLyric.Title, &infoLyric.Artist, &infoLyric.Lyric, &infoLyric.Romaji, &infoLyric.Type, &infoLyric.Source, &complete); err != nil {
-			return errors.WithStack(err)
-		}
-		infoLyric.IsComplete = complete != 0
-		info.InfoLyric = append(info.InfoLyric, infoLyric)
-	}
-	if err := rows.Err(); err != nil {
-		return errors.WithStack(err)
-	}
-	if len(info.InfoLyric) == 0 {
+	if len(rows) == 0 {
 		return errors.WithStack(os.ErrNotExist)
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		return lessLyricID(rows[i].LyricID, rows[j].LyricID)
+	})
+	for _, row := range rows {
+		info.InfoLyric = append(info.InfoLyric, InfoLyric{
+			ID:         row.LyricID,
+			Title:      row.Title,
+			Artist:     row.Artist,
+			Lyric:      row.Lyric,
+			Romaji:     row.Romaji,
+			Type:       row.Type,
+			Source:     row.Source,
+			IsComplete: row.IsComplete != 0,
+		})
 	}
 	info.HasPrevious = true
 	return nil
@@ -74,7 +88,15 @@ func (info *File) RemoveLyric() error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-	_, err = db.Exec("DELETE FROM lyrics WHERE cache_key = ?", info.FolderName)
-	return errors.WithStack(err)
+	defer closeDB(db)
+	return errors.WithStack(db.Where(lyricCacheKeyFilter(info.FolderName)).Delete(&lyricRow{}).Error)
+}
+
+func lessLyricID(left, right string) bool {
+	leftInt, leftErr := strconv.Atoi(left)
+	rightInt, rightErr := strconv.Atoi(right)
+	if leftErr == nil && rightErr == nil && leftInt != rightInt {
+		return leftInt < rightInt
+	}
+	return left < right
 }

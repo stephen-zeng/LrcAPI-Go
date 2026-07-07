@@ -1,10 +1,12 @@
 package file
 
 import (
-	"database/sql"
-	"github.com/pkg/errors"
-	_ "modernc.org/sqlite"
 	"os"
+	"path/filepath"
+
+	"github.com/glebarez/sqlite"
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 // 文件包负责读写
@@ -25,46 +27,36 @@ type InfoLyric struct {
 	IsComplete bool   `json:"isComplete"`
 }
 
-func init() {
-	os.Mkdir("assets", 0777)
-}
+var lyricsDBPath = filepath.Join("assets", "lyrics.db")
 
-func openDB() (*sql.DB, error) {
+func openDB() (*gorm.DB, error) {
+	if err := os.MkdirAll(filepath.Dir(lyricsDBPath), 0777); err != nil {
+		return nil, errors.WithStack(err)
+	}
 	// busy_timeout 避免后台补全与在线读写并发时的 "database is locked"；
 	// WAL 让读写可以并发进行。
-	db, err := sql.Open("sqlite", "assets/lyrics.db?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)")
+	db, err := gorm.Open(sqlite.Open(lyricsDBPath+"?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"), &gorm.Config{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	if err := db.Ping(); err != nil {
-		_ = db.Close()
+	sqlDB, err := db.DB()
+	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS lyrics (
-cache_key TEXT NOT NULL,
-lyric_id TEXT NOT NULL,
-title TEXT NOT NULL,
-artist TEXT NOT NULL,
-lyric TEXT NOT NULL,
-romaji TEXT NOT NULL DEFAULT '',
-type TEXT NOT NULL DEFAULT 'lrc',
-source TEXT NOT NULL DEFAULT '',
-is_complete INTEGER NOT NULL DEFAULT 0,
-created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-PRIMARY KEY (cache_key, lyric_id)
-);
-CREATE INDEX IF NOT EXISTS idx_lyrics_cache_key ON lyrics(cache_key);`); err != nil {
-		_ = db.Close()
+	if err := sqlDB.Ping(); err != nil {
+		_ = sqlDB.Close()
 		return nil, errors.WithStack(err)
 	}
-	// 兼容旧库：补齐新增列（忽略已存在的报错）
-	for _, stmt := range []string{
-		`ALTER TABLE lyrics ADD COLUMN romaji TEXT NOT NULL DEFAULT ''`,
-		`ALTER TABLE lyrics ADD COLUMN type TEXT NOT NULL DEFAULT 'lrc'`,
-		`ALTER TABLE lyrics ADD COLUMN source TEXT NOT NULL DEFAULT ''`,
-		`ALTER TABLE lyrics ADD COLUMN is_complete INTEGER NOT NULL DEFAULT 0`,
-	} {
-		_, _ = db.Exec(stmt)
+	if err := migrateLyricsDB(db); err != nil {
+		_ = sqlDB.Close()
+		return nil, err
 	}
 	return db, nil
+}
+
+func closeDB(db *gorm.DB) {
+	sqlDB, err := db.DB()
+	if err == nil {
+		_ = sqlDB.Close()
+	}
 }

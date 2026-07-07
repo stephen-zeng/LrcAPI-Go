@@ -2,10 +2,12 @@ package file
 
 import (
 	"log"
-	"lrcAPI/util"
 	"sync"
 
+	"lrcAPI/util"
+
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 // 同一 cache_key 的补全任务去重，避免并发请求重复调用大模型。
@@ -108,24 +110,23 @@ func completeLyrics(cacheKey string) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-	tx, err := db.Begin()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	stmt, err := tx.Prepare("UPDATE lyrics SET lyric = ?, romaji = ?, is_complete = ? WHERE cache_key = ? AND lyric_id = ?")
-	if err != nil {
-		_ = tx.Rollback()
-		return errors.WithStack(err)
-	}
-	defer stmt.Close()
-	for _, u := range updates {
-		if _, err := stmt.Exec(u.lyric, u.romaji, boolToInt(u.complete), cacheKey, u.lyricID); err != nil {
-			_ = tx.Rollback()
-			return errors.WithStack(err)
+	defer closeDB(db)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		for _, u := range updates {
+			row := lyricRow{
+				Lyric:      u.lyric,
+				Romaji:     u.romaji,
+				IsComplete: boolToInt(u.complete),
+			}
+			if err := tx.Model(&lyricRow{}).
+				Where(lyricPrimaryKeyFilter(cacheKey, u.lyricID)).
+				Select("Lyric", "Romaji", "IsComplete").
+				Updates(row).Error; err != nil {
+				return err
+			}
 		}
-	}
-	if err := tx.Commit(); err != nil {
+		return nil
+	}); err != nil {
 		return errors.WithStack(err)
 	}
 	log.Printf("lyric completion: updated %d entries for %q", len(updates), cacheKey)
@@ -138,24 +139,21 @@ func loadRows(cacheKey string) ([]dbRow, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
-	rows, err := db.Query("SELECT lyric_id, lyric, romaji, source, is_complete FROM lyrics WHERE cache_key = ?", cacheKey)
-	if err != nil {
+	defer closeDB(db)
+
+	var rows []lyricRow
+	if err := db.Where(lyricCacheKeyFilter(cacheKey)).Find(&rows).Error; err != nil {
 		return nil, errors.WithStack(err)
 	}
-	defer rows.Close()
-	var out []dbRow
-	for rows.Next() {
-		var r dbRow
-		var complete int
-		if err := rows.Scan(&r.lyricID, &r.lyric, &r.romaji, &r.source, &complete); err != nil {
-			return nil, errors.WithStack(err)
-		}
-		r.complete = complete != 0
-		out = append(out, r)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, errors.WithStack(err)
+	out := make([]dbRow, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, dbRow{
+			lyricID:  row.LyricID,
+			lyric:    row.Lyric,
+			romaji:   row.Romaji,
+			source:   row.Source,
+			complete: row.IsComplete != 0,
+		})
 	}
 	return out, nil
 }

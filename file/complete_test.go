@@ -1,8 +1,10 @@
 package file
 
 import (
-	"lrcAPI/util"
+	"path/filepath"
 	"testing"
+
+	"lrcAPI/util"
 )
 
 // 端到端：写入不完备的日语歌词 → 后台补全逻辑 → 重新读取应变为完备。
@@ -12,6 +14,7 @@ func TestCompleteLyricsRoundTrip(t *testing.T) {
 	if !util.LLMEnabled() {
 		t.Skip("LLM not configured; skipping live round-trip test")
 	}
+	useTempLyricsDB(t)
 
 	f := File{FolderName: "__test_artist__ - __test_title__"}
 	f.InfoLyric = []InfoLyric{
@@ -55,4 +58,13 @@ func TestCompleteLyricsRoundTrip(t *testing.T) {
 	if got.Romaji == "" {
 		t.Errorf("expected romaji to be filled")
 	}
+}
+
+func useTempLyricsDB(t *testing.T) {
+	t.Helper()
+	oldPath := lyricsDBPath
+	lyricsDBPath = filepath.Join(t.TempDir(), "lyrics.db")
+	t.Cleanup(func() {
+		lyricsDBPath = oldPath
+	})
 }
