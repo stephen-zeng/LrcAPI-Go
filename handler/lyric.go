@@ -33,6 +33,8 @@ func lyricHandler(c *gin.Context) {
 	}
 	if err := lyricRequest.File.ReadLyric(); err == nil {
 		log.Println("found exist")
+		// 后台异步补齐缺失的翻译/罗马音，对客户端无感
+		file.CompleteLyricsAsync(lyricRequest.Processor.Title, lyricRequest.Processor.Artist)
 		c.JSON(http.StatusOK, lyricRequest.File.InfoLyric)
 		return
 	}
@@ -45,17 +47,20 @@ func lyricHandler(c *gin.Context) {
 			lyricType = "lrc"
 		}
 		lyricRequest.File.InfoLyric = append(lyricRequest.File.InfoLyric, file.InfoLyric{
-			ID:     strconv.Itoa(index),
-			Title:  value.Title,
-			Artist: value.Artist,
-			Lyric:  value.Lyric,
-			Romaji: value.Romaji,
-			Type:   lyricType,
-			Source: value.Source,
+			ID:         strconv.Itoa(index),
+			Title:      value.Title,
+			Artist:     value.Artist,
+			Lyric:      value.Lyric,
+			Romaji:     value.Romaji,
+			Type:       lyricType,
+			Source:     value.Source,
+			IsComplete: value.Source == "fallback" || util.IsLyricComplete(value.Lyric, value.Romaji),
 		})
 	}
 	if err := lyricRequest.File.WriteLyric(); err != nil {
 		util.ErrorPrinter(err)
 	}
+	// 首次查询后同样触发后台补全，下次查询即可拿到补齐后的数据
+	file.CompleteLyricsAsync(lyricRequest.Processor.Title, lyricRequest.Processor.Artist)
 	c.JSON(http.StatusOK, lyricRequest.File.InfoLyric)
 }

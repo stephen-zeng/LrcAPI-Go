@@ -27,6 +27,17 @@ var (
 	YoutubeMusicCookie string
 )
 
+// 大模型（OpenAI 兼容接口）配置，用于补齐翻译与罗马音。
+// 留空则关闭自动补全功能。
+var (
+	// OpenAI 兼容接口的 API Key
+	OpenAIAPIKey string
+	// OpenAI 兼容接口的 Base URL（不需要含 /v1 等路径），如 https://api.deepseek.com
+	OpenAIBaseURL string
+	// 使用的模型名，如 deepseek-v4-flash
+	OpenAIModel string
+)
+
 // LoadEnv 读取 .env 文件（若存在）并把其中的键值对写入进程环境变量，
 // 已存在的环境变量不会被覆盖。随后把平台凭据读取到包级变量。
 // 这样二进制直接运行时可用 .env，容器部署时可用 docker-compose 的 environment。
@@ -45,6 +56,10 @@ func LoadEnv(path string) {
 	SodaCookie = os.Getenv("SODA_COOKIE")
 	BilibiliCookie = os.Getenv("BILIBILI_COOKIE")
 	YoutubeMusicCookie = os.Getenv("YOUTUBE_MUSIC_COOKIE")
+
+	OpenAIAPIKey = os.Getenv("OPENAI_API_KEY")
+	OpenAIBaseURL = strings.TrimRight(os.Getenv("OPENAI_BASE_URL"), "/")
+	OpenAIModel = os.Getenv("OPENAI_MODEL")
 }
 
 // loadDotEnvFile 解析形如 KEY=VALUE 的 .env 文件。

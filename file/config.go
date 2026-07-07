@@ -15,13 +15,14 @@ type File struct {
 }
 
 type InfoLyric struct {
-	ID     string `json:"id"`
-	Title  string `json:"title"`
-	Artist string `json:"artist"`
-	Lyric  string `json:"lyrics"`
-	Romaji string `json:"romaji"`
-	Type   string `json:"type"`
-	Source string `json:"source"`
+	ID         string `json:"id"`
+	Title      string `json:"title"`
+	Artist     string `json:"artist"`
+	Lyric      string `json:"lyrics"`
+	Romaji     string `json:"romaji"`
+	Type       string `json:"type"`
+	Source     string `json:"source"`
+	IsComplete bool   `json:"isComplete"`
 }
 
 func init() {
@@ -29,7 +30,9 @@ func init() {
 }
 
 func openDB() (*sql.DB, error) {
-	db, err := sql.Open("sqlite", "assets/lyrics.db")
+	// busy_timeout 避免后台补全与在线读写并发时的 "database is locked"；
+	// WAL 让读写可以并发进行。
+	db, err := sql.Open("sqlite", "assets/lyrics.db?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -46,6 +49,7 @@ lyric TEXT NOT NULL,
 romaji TEXT NOT NULL DEFAULT '',
 type TEXT NOT NULL DEFAULT 'lrc',
 source TEXT NOT NULL DEFAULT '',
+is_complete INTEGER NOT NULL DEFAULT 0,
 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 PRIMARY KEY (cache_key, lyric_id)
 );
@@ -58,6 +62,7 @@ CREATE INDEX IF NOT EXISTS idx_lyrics_cache_key ON lyrics(cache_key);`); err != 
 		`ALTER TABLE lyrics ADD COLUMN romaji TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE lyrics ADD COLUMN type TEXT NOT NULL DEFAULT 'lrc'`,
 		`ALTER TABLE lyrics ADD COLUMN source TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE lyrics ADD COLUMN is_complete INTEGER NOT NULL DEFAULT 0`,
 	} {
 		_, _ = db.Exec(stmt)
 	}

@@ -47,11 +47,16 @@ func netease(data *Processor) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		lyric := util.LrcTranslationBlender(res.Lyric, res.Translation)
+		// 原始歌词数据不足或异常（空歌词 / 仅罗马音等）的候选不入库
+		if !util.HasLyricContent(lyric) {
+			continue
+		}
 		data.InfoLyric = append(data.InfoLyric, InfoLyric{
 			Index:  API_TOT*index + NETEASE_API_COUNT,
 			Title:  (*titles)[index] + " (网易云音乐)",
 			Artist: (*artists)[index],
-			Lyric:  util.LrcTranslationBlender(res.Lyric, res.Translation),
+			Lyric:  lyric,
 			Romaji: res.Roma,
 			Type:   res.Type,
 			Source: "netease",
@@ -74,11 +79,16 @@ func qq(data *Processor) error {
 			// 单曲失败跳过，不中断整个来源
 			continue
 		}
+		lyric := util.LrcTranslationBlender(res.Lyric, res.Translation)
+		// 原始歌词数据不足或异常的候选不入库
+		if !util.HasLyricContent(lyric) {
+			continue
+		}
 		data.InfoLyric = append(data.InfoLyric, InfoLyric{
 			Index:  API_TOT*index + QQ_API_COUNT,
 			Title:  (*titles)[index] + " (QQ音乐)",
 			Artist: (*artists)[index],
-			Lyric:  util.LrcTranslationBlender(res.Lyric, res.Translation),
+			Lyric:  lyric,
 			Romaji: res.Roma,
 			Type:   res.Type,
 			Source: "qqmusic",
@@ -100,11 +110,16 @@ func kugou(data *Processor) error {
 		if err != nil {
 			continue
 		}
+		lyric := util.LrcTranslationBlender(res.Lyric, res.Translation)
+		// 原始歌词数据不足或异常的候选不入库
+		if !util.HasLyricContent(lyric) {
+			continue
+		}
 		data.InfoLyric = append(data.InfoLyric, InfoLyric{
 			Index:  API_TOT*index + KUGOU_API_COUNT,
 			Title:  (*titles)[index] + " (酷狗音乐)",
 			Artist: (*artists)[index],
-			Lyric:  util.LrcTranslationBlender(res.Lyric, res.Translation),
+			Lyric:  lyric,
 			Romaji: res.Roma,
 			Type:   res.Type,
 			Source: "kugou",
