@@ -49,6 +49,8 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Download all build artifacts
@@ -60,9 +62,7 @@ jobs:
         run: ls -R dist
 
       - name: Create Release
-        id: create_release
         uses: softprops/action-gh-release@v3
         with:
           files: dist/**/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
