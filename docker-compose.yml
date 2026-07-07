@@ -1,0 +1,26 @@
+services:
+  lrcapi:
+    # 官方镜像；arm64 主机可改用 0w0w0/lrcapi-go-arm:latest
+    image: 0w0w0/lrcapi-go:latest
+    # 如需本地构建，注释掉 image 并启用下面的 build：
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.d/amd64
+    container_name: lrcapi
+    restart: unless-stopped
+    ports:
+      - "8080:1111"
+    # 方式一：直接从宿主机的 .env 文件读取全部凭据（推荐）
+    env_file:
+      - .env
+    # 方式二：也可显式覆盖/追加个别变量
+    environment:
+      # 若未使用 env_file，可在此直接填写：
+      # LRCAPI_PWD: "123456"
+      # QQ_COOKIE: ""
+      # NETEASE_COOKIE: ""
+      # KUGOU_COOKIE: ""
+      TZ: Asia/Shanghai
+    volumes:
+      # 持久化 SQLite 歌词缓存
+      - ./data:/app/assets

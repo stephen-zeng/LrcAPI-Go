@@ -19,14 +19,14 @@ func (info *File) WriteLyric() error {
 		_ = tx.Rollback()
 		return errors.WithStack(err)
 	}
-	stmt, err := tx.Prepare("INSERT INTO lyrics (cache_key, lyric_id, title, artist, lyric) VALUES (?, ?, ?, ?, ?)")
+	stmt, err := tx.Prepare("INSERT INTO lyrics (cache_key, lyric_id, title, artist, lyric, romaji, type, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		_ = tx.Rollback()
 		return errors.WithStack(err)
 	}
 	defer stmt.Close()
 	for _, infoLyric := range info.InfoLyric {
-		if _, err := stmt.Exec(info.FolderName, infoLyric.ID, infoLyric.Title, infoLyric.Artist, infoLyric.Lyric); err != nil {
+		if _, err := stmt.Exec(info.FolderName, infoLyric.ID, infoLyric.Title, infoLyric.Artist, infoLyric.Lyric, infoLyric.Romaji, infoLyric.Type, infoLyric.Source); err != nil {
 			_ = tx.Rollback()
 			return errors.WithStack(err)
 		}
@@ -43,14 +43,14 @@ func (info *File) ReadLyric() error {
 		return err
 	}
 	defer db.Close()
-	rows, err := db.Query("SELECT lyric_id, title, artist, lyric FROM lyrics WHERE cache_key = ? ORDER BY CAST(lyric_id AS INTEGER), lyric_id", info.FolderName)
+	rows, err := db.Query("SELECT lyric_id, title, artist, lyric, romaji, type, source FROM lyrics WHERE cache_key = ? ORDER BY CAST(lyric_id AS INTEGER), lyric_id", info.FolderName)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var infoLyric InfoLyric
-		if err := rows.Scan(&infoLyric.ID, &infoLyric.Title, &infoLyric.Artist, &infoLyric.Lyric); err != nil {
+		if err := rows.Scan(&infoLyric.ID, &infoLyric.Title, &infoLyric.Artist, &infoLyric.Lyric, &infoLyric.Romaji, &infoLyric.Type, &infoLyric.Source); err != nil {
 			return errors.WithStack(err)
 		}
 		info.InfoLyric = append(info.InfoLyric, infoLyric)

@@ -2,3 +2,7 @@
 /assets
 /bin
 lrcAPI
+# 本地凭据文件，切勿提交（模板见 .env.example）
+.env
+# docker-compose 持久化目录
+/data

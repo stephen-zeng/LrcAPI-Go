@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	neteaseLrcURLTemplate   string = `https://music.163.com/api/song/lyric?id=%s&lv=1&tv=1`
+	neteaseLrcURLTemplate   string = `https://music.163.com/api/song/lyric?id=%s&lv=1&tv=1&rv=1`
 	neteaseSerachIDTemplate string = `https://music.163.com/api/search/get/web?csrf_token=hlpretag=&hlposttag=&s=%s&type=1&offset=0&total=true&limit=100`
 )
 
@@ -23,6 +23,9 @@ type neteaseLrcResponse struct {
 	TLyric struct {
 		Lyric string `json:"lyric"`
 	} `json:"tlyric"`
+	Romalrc struct {
+		Lyric string `json:"lyric"`
+	} `json:"romalrc"`
 }
 
 type neteaseSerachIDResponse struct {
@@ -38,27 +41,35 @@ type neteaseSerachIDResponse struct {
 }
 
 // 通过ID查找歌词
-// 返回歌词，翻译歌词以及错误
+// 返回统一的 LyricResult（主歌词 / 翻译 / 罗马音）以及错误
 // 返回的歌词都是未转译的
 // 若返回的歌词数据是空的，那就是无歌词（纯音乐）
-func NeteaseGetLyric(ID string) (string, string, error) {
+func NeteaseGetLyric(ID string) (*LyricResult, error) {
 	url := fmt.Sprintf(neteaseLrcURLTemplate, ID)
 	req, _ := http.NewRequest("GET", url, nil)
 	SetHeader(req)
 	req.Header.Set("Referer", "https://music.163.com/")
 	req.Header.Set("Origin", "https://music.163.com/")
+	if NeteaseCookie != "" {
+		req.Header.Set("Cookie", NeteaseCookie)
+	}
 	resp, err := GlobalHTTPClient.Do(req)
 	switch {
 	case err != nil:
-		return "", "", errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	case resp.StatusCode != http.StatusOK:
-		return "", "", errors.WithStack(errors.New(resp.Status))
+		return nil, errors.WithStack(errors.New(resp.Status))
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	var response neteaseLrcResponse
 	_ = json.Unmarshal(body, &response)
-	return response.Lrc.Lyric, response.TLyric.Lyric, nil
+	return &LyricResult{
+		Lyric:       response.Lrc.Lyric,
+		Translation: response.TLyric.Lyric,
+		Roma:        response.Romalrc.Lyric,
+		Type:        "lrc",
+	}, nil
 }
 
 // 搜索

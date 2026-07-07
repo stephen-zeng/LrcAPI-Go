@@ -6,6 +6,7 @@ require (
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
 	github.com/gin-contrib/cors v1.7.5
 	github.com/gin-gonic/gin v1.10.0
+	github.com/jixunmoe-go/qrc v0.0.0-20230917162828-866e996416b0
 	github.com/pkg/errors v0.9.1
 	modernc.org/sqlite v1.46.1
 )

@@ -40,11 +40,18 @@ func lyricHandler(c *gin.Context) {
 		util.ErrorPrinter(err)
 	}
 	for index, value := range lyricRequest.Processor.InfoLyric {
+		lyricType := value.Type
+		if lyricType == "" {
+			lyricType = "lrc"
+		}
 		lyricRequest.File.InfoLyric = append(lyricRequest.File.InfoLyric, file.InfoLyric{
 			ID:     strconv.Itoa(index),
 			Title:  value.Title,
 			Artist: value.Artist,
 			Lyric:  value.Lyric,
+			Romaji: value.Romaji,
+			Type:   lyricType,
+			Source: value.Source,
 		})
 	}
 	if err := lyricRequest.File.WriteLyric(); err != nil {
