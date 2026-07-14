@@ -78,6 +78,43 @@ func TestMigrateLyricsDBFromOldSchema(t *testing.T) {
 	}
 }
 
+func TestMigrateLyricsDBRepairsJoinedTranslationLines(t *testing.T) {
+	db := openTempGorm(t)
+	defer closeDB(db)
+
+	if err := db.AutoMigrate(&lyricRow{}, &schemaMigration{}); err != nil {
+		t.Fatalf("create schema: %v", err)
+	}
+	malformed := "[00:01.00]原文[00:01.00]译文\n[00:02.00][00:02.00]重复时间原文"
+	if err := db.Create(&lyricRow{
+		CacheKey: "artist - title",
+		LyricID:  "0",
+		Title:    "title",
+		Artist:   "artist",
+		Lyric:    malformed,
+		Type:     "lrc",
+		Source:   "qqmusic",
+	}).Error; err != nil {
+		t.Fatalf("insert malformed row: %v", err)
+	}
+	if err := saveLyricsSchemaVersion(db, 1); err != nil {
+		t.Fatalf("set old schema version: %v", err)
+	}
+
+	if err := migrateLyricsDB(db); err != nil {
+		t.Fatalf("migrateLyricsDB: %v", err)
+	}
+
+	var got lyricRow
+	if err := db.First(&got, lyricPrimaryKeyFilter("artist - title", "0")).Error; err != nil {
+		t.Fatalf("read migrated row: %v", err)
+	}
+	want := "[00:01.00]原文\n[00:01.00]译文\n[00:02.00][00:02.00]重复时间原文"
+	if got.Lyric != want {
+		t.Fatalf("unexpected repaired lyric:\n got: %q\nwant: %q", got.Lyric, want)
+	}
+}
+
 func TestWriteReadLyricRoundTrip(t *testing.T) {
 	useTempLyricsDB(t)
 

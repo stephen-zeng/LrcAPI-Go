@@ -17,7 +17,7 @@ func makeLrcMap(lrc string, timeStampPos [][]int, timeStamps []string) *map[stri
 	return &ret
 }
 
-// 需要未转译的数据，也就是直接从netease获取的数据
+// LrcTranslationBlender 按时间戳交错合并原歌词与翻译歌词。
 func LrcTranslationBlender(LRC, TLRC string) string {
 	re := regexp.MustCompile(`\[\d{2}:\d{2}\.\d{3}\]`)
 	LRCTimeStamps := re.FindAllString(LRC, -1)
@@ -28,10 +28,16 @@ func LrcTranslationBlender(LRC, TLRC string) string {
 	ret := ""
 	TLRCMap := makeLrcMap(TLRC, re.FindAllStringIndex(TLRC, -1), re.FindAllString(TLRC, -1))
 	LRCMap := makeLrcMap(LRC, re.FindAllStringIndex(LRC, -1), re.FindAllString(LRC, -1))
+	appendPart := func(timeStamp, text string) {
+		if ret != "" && !strings.HasSuffix(ret, "\n") {
+			ret += "\n"
+		}
+		ret += timeStamp + text
+	}
 	for _, timeStamp := range LRCTimeStamps {
-		ret += timeStamp + (*LRCMap)[timeStamp]
+		appendPart(timeStamp, (*LRCMap)[timeStamp])
 		if tlrc, exist := (*TLRCMap)[timeStamp]; exist {
-			ret += timeStamp + tlrc
+			appendPart(timeStamp, tlrc)
 		}
 	}
 	return strings.ReplaceAll(ret, `\"`, `"`)

@@ -2,14 +2,16 @@ package file
 
 import (
 	stderrors "errors"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
-const currentLyricsSchemaVersion = 1
+const currentLyricsSchemaVersion = 2
 
 const lyricsMigrationKey = "lyrics_schema_version"
 
@@ -52,11 +54,71 @@ func migrateLyricsDB(db *gorm.DB) error {
 		if version >= currentLyricsSchemaVersion {
 			return nil
 		}
-		if err := backfillLyricsCompleteness(tx); err != nil {
-			return err
+		if version < 2 {
+			if err := repairJoinedTranslationLines(tx); err != nil {
+				return err
+			}
+		}
+		if version < 1 {
+			if err := backfillLyricsCompleteness(tx); err != nil {
+				return err
+			}
 		}
 		return saveLyricsSchemaVersion(tx, currentLyricsSchemaVersion)
 	})
+}
+
+var migrationLrcTimeTagRe = regexp.MustCompile(`\[\d{1,2}:\d{2}[.:]\d{2,3}\]`)
+
+// repairJoinedTranslationLines repairs the old blender output "[time]original[time]translation".
+// Repeated tags without text between them are valid multi-timestamp LRC and remain unchanged.
+func repairJoinedTranslationLines(db *gorm.DB) error {
+	var rows []lyricRow
+	if err := db.Find(&rows).Error; err != nil {
+		return pkgerrors.WithStack(err)
+	}
+	for _, row := range rows {
+		lyric, changed := splitJoinedTranslationLines(row.Lyric)
+		if !changed {
+			continue
+		}
+		if err := db.Model(&lyricRow{}).
+			Where(lyricPrimaryKeyFilter(row.CacheKey, row.LyricID)).
+			Update("lyric", lyric).Error; err != nil {
+			return pkgerrors.WithStack(err)
+		}
+	}
+	return nil
+}
+
+func splitJoinedTranslationLines(lrc string) (string, bool) {
+	lines := strings.Split(lrc, "\n")
+	changed := false
+	for lineIndex, line := range lines {
+		tags := migrationLrcTimeTagRe.FindAllStringIndex(line, -1)
+		if len(tags) < 2 {
+			continue
+		}
+
+		var repaired strings.Builder
+		last := 0
+		for i := 1; i < len(tags); i++ {
+			previous, current := tags[i-1], tags[i]
+			if line[previous[0]:previous[1]] != line[current[0]:current[1]] ||
+				strings.TrimSpace(line[previous[1]:current[0]]) == "" {
+				continue
+			}
+			repaired.WriteString(line[last:current[0]])
+			repaired.WriteByte('\n')
+			last = current[0]
+			changed = true
+		}
+		if last > 0 {
+			repaired.WriteString(line[last:])
+			lines[lineIndex] = repaired.String()
+		}
+	}
+	return strings.Join(lines, "\n"), changed
 }
 
 func lyricsSchemaVersion(db *gorm.DB) (int, error) {
